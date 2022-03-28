@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 class Row
-  attr_accessor :code_entries
+  attr_accessor :code
 
   def initialize
-    @code_entries = Array.new(4, ' ')
+    @code = Array.new(4, ' ')
   end
 end
 
@@ -12,11 +12,11 @@ class ShieldedRow < Row
 end
 
 class GuessRow < Row
-  attr_accessor :key_entries
+  attr_accessor :keys
 
   def initialize
     super
-    @key_entries = Array.new(4, ' ')
+    @keys = Array.new(4, ' ')
   end
 end
 
@@ -30,6 +30,6 @@ class DecodingBoard
 
   def show_board
     p @shielded_row
-    @guess_rows.each { |guess_row| puts "#{guess_row.code_entries} -- #{guess_row.key_entries}" }
+    @guess_rows.each { |guess_row| puts "#{guess_row.code} -- #{guess_row.keys}" }
   end
 end

@@ -19,8 +19,6 @@ class Game
   end
 
   def play_turn
-    p end_round?
-    p @turn += 1
     codebreaker_input
     codemaker_output
     @decoding_board.show_board
@@ -53,7 +51,7 @@ class Game
   end
 
   def code_broken?
-    @decoding_board.guess_rows[@turn].key_entries.eql?(%w[B B B B])
+    @decoding_board.guess_rows[@turn].keys.eql?(%w[B B B B])
   end
 
   def no_more_turns?
