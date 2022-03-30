@@ -1,95 +1,97 @@
 # frozen_string_literal: true
 
+require_relative 'interface'
 require_relative 'decoding_board'
 require_relative 'players'
 
+# The Game class represents a Mastermind game. It provides methods for playing the
+# game, initialize game data, check for winners and game end.
 class Game
-  def initialize
-    @decoding_board = DecodingBoard.new
-    if choose_player == '1'
+  include Interface
+
+  def play
+    show_intro
+
+    @rounds = rounds_input
+    @max_turns = max_turns_input
+    @starting_role = starting_role_input
+    @score = [0, 0]
+
+    @rounds.times do |round|
+      play_round(round)
+    end
+
+    show_game_result
+  end
+
+  def play_round(round)
+    initialize_round(round)
+
+    @decoding_board.secret_row = @codemaker.make_code.chars
+
+    play_turn until end_round?
+
+    @decoding_board.show_secret unless code_broken?
+
+    update_score(round)
+    show_round_result
+  end
+
+  def initialize_round(round)
+    @decoding_board = DecodingBoard.new(@max_turns)
+
+    if (round % 2) == @starting_role
       @codebreaker = Codebreaker.new('human')
       @codemaker = Codemaker.new('computer')
     else
       @codebreaker = Codebreaker.new('computer')
       @codemaker = Codemaker.new('human')
     end
+
     @turn = -1
+    sleep(1)
   end
 
-  def choose_player
-    puts 'Which player do you want to be? Enter 1 for codebreaker or 2 for codemaker'
-
-    player_option = gets.chomp
-
-    until validate_option(player_option)
-      puts 'Invalid input! Please enter 1 for codebreaker or 2 for codemaker.'
-      player_option = gets.chomp
+  def update_score(round)
+    if (round % 2) == @starting_role
+      @score[1] += @turn
+    else
+      @score[0] += @turn
     end
-
-    player_option
-  end
-
-  def play
-    puts 'Let\'s play mastermind!'
-    @codemaker.create_code(@decoding_board.shielded_row)
-    play_turn until end_round?
-    code_broken? ? puts('Congratulations! You broke the code!') : puts("Too bad! You couldn't break the code")
   end
 
   def play_turn
     end_round?
+
     @turn += 1
-    codebreaker_input
-    codemaker_output
+
+    codebreaker_play
+
+    codemaker_play
+
     @decoding_board.show_board
   end
 
-  def codebreaker_input_human
-    puts "Please insert your code #{@codebreaker.name}."
-    guess_code = gets.chomp
+  def codebreaker_play
+    sleep(1)
 
-    until validate_code(guess_code)
-      puts 'Invalid input! Please insert valid guess codebreaker.'
-      guess_code = gets.chomp
-    end
-
-    @codebreaker.insert_code(@decoding_board.guess_rows[@turn], guess_code)
+    @decoding_board.guess_rows[@turn][:code] = @codebreaker.play_turn(@decoding_board.guess_rows[@turn - 1][:code],
+                                                                      @decoding_board.guess_rows[@turn - 1][:keys])
   end
 
-  def codebreaker_input
-    if @codebreaker.type == 'computer'
-      guess_code = @codebreaker.filter_possible_guesses(@decoding_board.guess_rows[@turn - 1]).sample if @turn >= 1
-      guess_code = @codebreaker.possible_guesses.sample if @turn == 0
-      @codebreaker.insert_code(@decoding_board.guess_rows[@turn], guess_code.join)
-    else
-      codebreaker_input_human
-    end
-  end
+  def codemaker_play
+    sleep(1)
 
-  def codemaker_output
-    black_keys = @codemaker.compute_black_code_entries(@decoding_board.guess_rows[@turn],
-                                                       @decoding_board.shielded_row).length
-    white_keys = @codemaker.compute_white_code_entries(@decoding_board.guess_rows[@turn],
-                                                       @decoding_board.shielded_row).length
-
-    @codemaker.insert_keys(@decoding_board.guess_rows[@turn], black_keys, white_keys)
-    @codemaker.reset_entries
-  end
-
-  def validate_option(option)
-    option.match?(/^[12]{1}$/)
-  end
-
-  def validate_code(code)
-    code.match?(/^[BRYPOG]{4}$/)
+    @decoding_board.guess_rows[@turn][:keys] = @codemaker.play_turn(@decoding_board.guess_rows[@turn][:code],
+                                                                    @decoding_board.secret_row)
   end
 
   def code_broken?
-    @decoding_board.guess_rows[@turn].keys.eql?(%w[B B B B])
+    @decoding_board.guess_rows[@turn][:keys].eql?(%w[B B B B])
   end
 
   def no_more_turns?
-    @turn >= 11
+    @turn >= @max_turns - 1
   end
 
   def end_round?
